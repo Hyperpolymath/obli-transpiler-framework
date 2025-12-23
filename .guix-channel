@@ -1,7 +1,0 @@
-;; obli-transpiler-framework - Guix Channel
-;; Add to ~/.config/guix/channels.scm
-
-(channel
- (version 0)
- (url "https://github.com/hyperpolymath/obli-transpiler-framework")
- (branch "main"))

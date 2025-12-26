@@ -1,1 +1,164 @@
+// SPDX-License-Identifier: MIT OR AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2024-2025 hyperpolymath
 
+= obli-transpiler-framework
+:toc: macro
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+[.lead]
+*A framework for building oblivious program transpilers.*
+
+[IMPORTANT]
+====
+*Project Status: Infrastructure Only*
+
+This repository currently contains project infrastructure and CI/CD automation only. +
+The transpiler specification and implementation are forthcoming.
+====
+
+toc::[]
+
+== Overview
+
+The obli-transpiler-framework is designed to provide tooling for transforming programs into _oblivious_ variants - programs whose execution paths are independent of secret or private data. This is a foundational technique for:
+
+* Privacy-preserving computation
+* Cryptographic protocol implementation
+* Side-channel attack mitigation
+* Secure multi-party computation
+
+== Current State
+
+[cols="1,3"]
+|===
+| Component | Status
+
+| *Infrastructure*
+| Complete - CI/CD, policy enforcement, multi-forge sync
+
+| *Specification*
+| Pending - will be uploaded shortly
+
+| *Core Implementation*
+| Not started
+
+| *Documentation*
+| Minimal - this README and citation guide only
+|===
+
+=== What Exists Now
+
+[source]
+----
+obli-transpiler-framework/
+├── .claude/CLAUDE.md        # Language policy (Hyperpolymath Standard)
+├── .github/
+│   └── workflows/           # 12 CI/CD workflows
+│       ├── codeql.yml           # Security scanning
+│       ├── rsr-antipattern.yml  # TypeScript/Go/npm blocking
+│       ├── security-policy.yml  # MD5/SHA1/HTTP checks
+│       ├── instant-sync.yml     # Multi-forge propagation
+│       └── ...
+├── docs/
+│   └── CITATIONS.adoc       # Academic citation formats
+├── justfile                 # Task runner (build/test/lint TODO)
+├── LICENSE.txt              # MIT OR AGPL-3.0-or-later
+└── README.adoc              # This file
+----
+
+=== What Does NOT Exist Yet
+
+* Source code for transpilation logic
+* Language frontend parsers
+* IR (Intermediate Representation) definitions
+* Obliviousness transformation passes
+* Target language backends
+* Test suites
+* Usage examples
+
+== Planned Architecture
+
+_The following is a placeholder for the planned architecture. Full specification pending._
+
+[source]
+----
+                    ┌─────────────────────────────────────────┐
+                    │        obli-transpiler-framework        │
+                    └─────────────────────────────────────────┘
+                                        │
+        ┌───────────────────────────────┼───────────────────────────────┐
+        │                               │                               │
+        ▼                               ▼                               ▼
+   ┌─────────┐                   ┌─────────────┐                 ┌──────────┐
+   │ Frontend│                   │  Core IR &  │                 │ Backend  │
+   │ Parsers │                   │ Transforms  │                 │ Emitters │
+   └─────────┘                   └─────────────┘                 └──────────┘
+        │                               │                               │
+   Source Code              Obliviousness Passes               Target Code
+----
+
+== Language Policy
+
+This project adheres to the *Hyperpolymath Standard* for language selection:
+
+[cols="1,1,2"]
+|===
+| Allowed | Banned | Notes
+
+| ReScript | TypeScript | Primary application language
+| Deno | Node/npm/Bun | Runtime and package management
+| Rust | Go | Performance-critical code
+| Gleam | - | Backend services (BEAM/JS)
+| Guile Scheme | - | Configuration/metadata
+|===
+
+See link:.claude/CLAUDE.md[CLAUDE.md] for the complete policy.
+
+== Development
+
+=== Prerequisites
+
+* https://deno.land[Deno] - Runtime
+* https://github.com/casey/just[just] - Task runner
+* https://guix.gnu.org[GNU Guix] (optional) - Package management
+
+=== Available Tasks
+
+[source,bash]
+----
+just          # List all available tasks
+just build    # Build (TODO)
+just test     # Test (TODO)
+just fmt      # Format (TODO)
+just lint     # Lint (TODO)
+----
+
+== Roadmap
+
+See link:ROADMAP.adoc[ROADMAP.adoc] for the development roadmap.
+
+== License
+
+Dual-licensed under your choice of:
+
+* **MIT License** - Permissive, maximum flexibility
+* **AGPL-3.0-or-later** - Copyleft, network service source disclosure
+
+See link:LICENSE.txt[LICENSE.txt] for details.
+
+The project also encourages (non-binding) adherence to the https://github.com/hyperpolymath/palimpsest-license[Palimpsest License] principles for consent-based digital interaction.
+
+== Citation
+
+See link:docs/CITATIONS.adoc[docs/CITATIONS.adoc] for academic citation formats (BibTeX, Harvard, APA, OSCOLA, MLA).
+
+== Contributing
+
+Contributions welcome once the specification is published. Until then, this repository serves as infrastructure scaffolding following https://github.com/hyperpolymath[Rhodium Standard Repository] conventions.
+
+== Links
+
+* https://github.com/hyperpolymath/obli-transpiler-framework[GitHub]
+* https://github.com/hyperpolymath[hyperpolymath]

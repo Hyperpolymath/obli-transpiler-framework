@@ -1,0 +1,321 @@
+// SPDX-License-Identifier: MIT OR AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2024-2025 hyperpolymath
+
+= obli-transpiler-framework Roadmap
+:toc: macro
+:toclevels: 2
+:icons: font
+
+[.lead]
+Development roadmap for the oblivious program transpiler framework.
+
+[NOTE]
+====
+This roadmap reflects current infrastructure state and anticipated development phases. +
+Actual implementation depends on specification upload and design decisions.
+====
+
+toc::[]
+
+== Current Status
+
+=== Phase 0: Infrastructure [COMPLETE]
+
+[cols="1,3,1"]
+|===
+| Item | Description | Status
+
+| Repository structure
+| RSR-compliant layout with standard files
+| Done
+
+| CI/CD pipelines
+| 12 GitHub Actions workflows
+| Done
+
+| Policy enforcement
+| Anti-pattern blocking (TS, Go, npm)
+| Done
+
+| Security scanning
+| CodeQL, Scorecard, security policy checks
+| Done
+
+| Multi-forge sync
+| GitHub -> GitLab, Codeberg, Bitbucket
+| Done
+
+| License
+| MIT OR AGPL-3.0-or-later dual license
+| Done
+
+| Citation metadata
+| Academic citation formats
+| Done
+
+| Issue templates
+| Bug, feature, question, docs, custom
+| Done
+|===
+
+== Planned Phases
+
+=== Phase 1: Specification & Design
+
+[cols="1,3,1"]
+|===
+| Item | Description | Status
+
+| Core specification
+| Define obliviousness model and guarantees
+| *Pending*
+
+| IR design
+| Intermediate representation for oblivious programs
+| Pending
+
+| Transformation rules
+| Formal specification of obliviousness passes
+| Pending
+
+| Language support matrix
+| Source and target language priorities
+| Pending
+
+| API design
+| Public interface for transpiler consumers
+| Pending
+
+| Test strategy
+| Property-based testing, fuzzing approach
+| Pending
+|===
+
+=== Phase 2: Core Implementation
+
+[cols="1,3,1"]
+|===
+| Item | Description | Status
+
+| Parser framework
+| Generic frontend for source languages (ReScript)
+| Pending
+
+| IR implementation
+| Core intermediate representation (Rust)
+| Pending
+
+| Basic transforms
+| Fundamental obliviousness transformations
+| Pending
+
+| First backend
+| Initial target language emitter
+| Pending
+
+| Test suite
+| Unit and integration tests
+| Pending
+
+| CLI tool
+| Command-line interface (Rust)
+| Pending
+|===
+
+=== Phase 3: Language Frontends
+
+[cols="1,3,1"]
+|===
+| Item | Description | Status
+
+| ReScript frontend
+| Parse ReScript source programs
+| Pending
+
+| Rust frontend
+| Parse Rust source programs
+| Pending
+
+| Gleam frontend
+| Parse Gleam source programs
+| Pending
+
+| JavaScript frontend
+| Parse JavaScript (Deno-compatible)
+| Pending
+|===
+
+=== Phase 4: Language Backends
+
+[cols="1,3,1"]
+|===
+| Item | Description | Status
+
+| Rust backend
+| Emit oblivious Rust code
+| Pending
+
+| WASM backend
+| Emit WebAssembly
+| Pending
+
+| ReScript backend
+| Emit oblivious ReScript
+| Pending
+
+| C backend
+| Emit C for embedded/systems
+| Pending
+|===
+
+=== Phase 5: Advanced Features
+
+[cols="1,3,1"]
+|===
+| Item | Description | Status
+
+| Optimization passes
+| Performance without leaking timing
+| Pending
+
+| Verification
+| Formal verification of obliviousness
+| Pending
+
+| IDE integration
+| Language server protocol (LSP)
+| Pending
+
+| Documentation
+| User guide, API docs, tutorials
+| Pending
+
+| Benchmarks
+| Performance measurement suite
+| Pending
+|===
+
+=== Phase 6: Ecosystem
+
+[cols="1,3,1"]
+|===
+| Item | Description | Status
+
+| Package publishing
+| Deno, crates.io, Hex.pm
+| Pending
+
+| Example projects
+| Real-world usage demonstrations
+| Pending
+
+| Integration guides
+| How to use with existing projects
+| Pending
+
+| Security audit
+| Third-party security review
+| Pending
+|===
+
+== Technical Decisions (Pending)
+
+The following architectural decisions need to be made during Phase 1:
+
+=== IR Design Questions
+
+* Single IR vs. multi-level IR hierarchy?
+* SSA form vs. other representations?
+* How to represent obliviousness guarantees in types?
+
+=== Transformation Strategy
+
+* Source-to-source vs. source-to-IR-to-target?
+* Whole-program vs. incremental transformation?
+* How to handle I/O and side effects?
+
+=== Obliviousness Model
+
+* What leakage model(s) to support?
+* Constant-time only or broader guarantees?
+* Memory access patterns - ORAM integration?
+
+=== Implementation Languages
+
+Following the Hyperpolymath Standard:
+
+* *Core transpiler*: Rust (performance, WASM target)
+* *Configuration/glue*: ReScript + Deno
+* *Metadata*: Guile Scheme
+* *Backend services*: Gleam (if needed)
+
+== Dependencies (Anticipated)
+
+[cols="1,2,1"]
+|===
+| Dependency | Purpose | License
+
+| tree-sitter
+| Parsing framework
+| MIT
+
+| salsa
+| Incremental computation (Rust)
+| Apache-2.0/MIT
+
+| ariadne
+| Error reporting (Rust)
+| MIT
+
+| clap
+| CLI parsing (Rust)
+| MIT/Apache-2.0
+
+| deno_core
+| Runtime integration
+| MIT
+|===
+
+== Milestones
+
+[cols="1,3"]
+|===
+| Milestone | Definition
+
+| *M0*
+| Infrastructure complete (current state)
+
+| *M1*
+| Specification published, design documented
+
+| *M2*
+| Minimal viable transpiler: one language, basic obliviousness
+
+| *M3*
+| Multi-language support, comprehensive transforms
+
+| *M4*
+| Production-ready with verification and tooling
+
+| *M5*
+| Ecosystem integration and community adoption
+|===
+
+== Contributing
+
+Once the specification is published (Phase 1 complete), contributions will be welcome in the following areas:
+
+* Language frontend development
+* Backend emitter implementation
+* Test case development
+* Documentation and tutorials
+* Security review and fuzzing
+
+== References
+
+_To be populated with academic papers and prior art once specification work begins._
+
+* Oblivious RAM (ORAM) literature
+* Constant-time programming techniques
+* Secure multi-party computation
+* Side-channel attack mitigation

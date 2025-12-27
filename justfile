@@ -17,6 +17,18 @@ build:
 test:
     cargo test
 
+# Run conformance tests only
+conformance:
+    cargo test --test conformance --test emitter_conformance
+
+# Run IR conformance tests
+conformance-ir:
+    cargo test --test conformance -- --nocapture
+
+# Run emitter conformance tests
+conformance-emit:
+    cargo test --test emitter_conformance -- --nocapture
+
 # Clean build artifacts
 clean:
     cargo clean

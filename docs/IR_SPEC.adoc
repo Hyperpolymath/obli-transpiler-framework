@@ -1,0 +1,394 @@
+// SPDX-License-Identifier: MIT OR AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2024-2025 hyperpolymath
+
+= Oblivious IR Specification
+:toc: macro
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+[.lead]
+Formal specification of the Oblivious Intermediate Representation (ObliIR).
+
+toc::[]
+
+== Overview
+
+The Oblivious IR is a typed intermediate representation where:
+
+1. All values are tagged with secrecy level (Public or Secret)
+2. All operations are constant-time
+3. Branching on secret conditions is replaced with constant-time selection
+
+== Secrecy Model
+
+=== Secrecy Levels
+
+[cols="1,2,3"]
+|===
+| Level | Notation | Description
+
+| *Public*
+| `Pub<T>`
+| Observable by adversary, may branch on
+
+| *Secret*
+| `Secret<T>`
+| Must not leak through timing, memory access, or control flow
+|===
+
+=== Secrecy Lattice
+
+[source]
+----
+    Secret
+      ↑
+    Public
+----
+
+* `Public ⊑ Secret` (public can be "upgraded" to secret)
+* Once secret, always secret (no downgrade without explicit `reveal`)
+
+== IR Grammar
+
+=== Abstract Syntax
+
+[source,bnf]
+----
+ObliExpr ::=
+    | PubInt(i64)                           -- public integer literal
+    | PubBool(bool)                         -- public boolean literal
+    | SecretInt(i64)                        -- secret integer literal
+    | SecretBool(bool)                      -- secret boolean literal
+    | Var { name: String, is_secret: bool } -- variable reference
+    | BinOp { op, left, right, is_secret }  -- binary operation
+    | UnaryOp { op, expr, is_secret }       -- unary operation
+    | CtSelect { cond, then_val, else_val } -- constant-time selection
+    | PubIf { cond, then, else }            -- public conditional
+    | Let { name, value, body, is_secret }  -- let binding
+
+ObliBinOp ::=
+    | CtAdd | CtSub | CtMul | CtDiv | CtMod  -- arithmetic
+    | CtEq | CtNe | CtLt | CtLe | CtGt | CtGe -- comparison
+    | CtAnd | CtOr                            -- logical
+
+ObliUnaryOp ::=
+    | CtNeg  -- arithmetic negation
+    | CtNot  -- logical not
+----
+
+=== Typing Rules
+
+==== Literals
+
+[source]
+----
+─────────────────────────
+Γ ⊢ PubInt(n) : Pub<i64>
+
+─────────────────────────
+Γ ⊢ PubBool(b) : Pub<bool>
+
+────────────────────────────
+Γ ⊢ SecretInt(n) : Secret<i64>
+
+────────────────────────────
+Γ ⊢ SecretBool(b) : Secret<bool>
+----
+
+==== Variables
+
+[source]
+----
+(x : τ) ∈ Γ    is_secret = (τ = Secret<_>)
+──────────────────────────────────────────
+Γ ⊢ Var { name: x, is_secret } : τ
+----
+
+==== Binary Operations
+
+[source]
+----
+Γ ⊢ e₁ : τ₁    Γ ⊢ e₂ : τ₂    τ = join(τ₁, τ₂)
+──────────────────────────────────────────────
+Γ ⊢ BinOp { op, e₁, e₂, is_secret } : τ
+
+where join(Pub<T>, Pub<T>) = Pub<T>
+      join(Secret<T>, _) = Secret<T>
+      join(_, Secret<T>) = Secret<T>
+----
+
+==== Constant-Time Selection (CRITICAL)
+
+[source]
+----
+Γ ⊢ cond : Secret<bool>
+Γ ⊢ then_val : Secret<T>
+Γ ⊢ else_val : Secret<T>
+────────────────────────────────────────────
+Γ ⊢ CtSelect { cond, then_val, else_val } : Secret<T>
+----
+
+**Invariant**: `CtSelect` is ONLY used when `cond` is secret.
+
+==== Public Conditional
+
+[source]
+----
+Γ ⊢ cond : Pub<bool>
+Γ ⊢ then_branch : τ₁
+Γ ⊢ else_branch : τ₂
+────────────────────────────────────────
+Γ ⊢ PubIf { cond, then_branch, else_branch } : join(τ₁, τ₂)
+----
+
+**Invariant**: `PubIf` is ONLY used when `cond` is public.
+
+==== Let Binding
+
+[source]
+----
+Γ ⊢ value : τ₁    Γ, (name : τ₁) ⊢ body : τ₂
+────────────────────────────────────────────────
+Γ ⊢ Let { name, value, body, is_secret } : τ₂
+----
+
+**Note**: The `is_secret` field tracks whether the *binding* is secret (i.e., `value.is_secret()`).
+The expression's *result* secrecy is determined by `body.is_secret()`.
+
+Example: `let x = 1 in x + secret(2)` has:
+- `is_secret = false` (binding x=1 is public)
+- Result secrecy = `true` (body contains secret)
+
+== Transformation Rules
+
+=== Source → IR Transformation
+
+==== T-SECRET
+
+[source]
+----
+Transform(secret(e)) = mark_secret(Transform(e))
+----
+
+Wraps the inner expression result in secret type.
+
+==== T-IF-SECRET (Key Rule)
+
+[source]
+----
+Transform(if c then t else e) = CtSelect {
+    cond: Transform(c),
+    then_val: Transform(t),
+    else_val: Transform(e)
+}
+    when is_secret(Transform(c)) = true
+----
+
+**This is the core obliviousness transformation.**
+
+==== T-IF-PUBLIC
+
+[source]
+----
+Transform(if c then t else e) = PubIf {
+    cond: Transform(c),
+    then_branch: Transform(t),
+    else_branch: Transform(e)
+}
+    when is_secret(Transform(c)) = false
+----
+
+==== T-BINOP
+
+[source]
+----
+Transform(e₁ op e₂) = BinOp {
+    op: ct_version(op),
+    left: Transform(e₁),
+    right: Transform(e₂),
+    is_secret: is_secret(left) ∨ is_secret(right)
+}
+----
+
+==== T-LET
+
+[source]
+----
+Transform(let x = v in b) = Let {
+    name: x,
+    value: Transform(v),
+    body: Transform(b)[x ↦ secrecy(v)],
+    is_secret: is_secret(Transform(v))
+}
+----
+
+The variable `x` inherits the secrecy of its bound value.
+
+== Conformance Properties
+
+=== Property 1: No Secret Branching
+
+[source]
+----
+∀ e ∈ ObliExpr:
+    if e = PubIf { cond, _, _ } then is_secret(cond) = false
+----
+
+A well-formed ObliIR never contains `PubIf` with a secret condition.
+
+=== Property 2: Secret Conditionals Use CtSelect
+
+[source]
+----
+∀ (if c then t else e) in source where is_secret(c):
+    Transform(if c then t else e) = CtSelect { ... }
+----
+
+=== Property 3: Secrecy Propagation
+
+[source]
+----
+∀ BinOp { left, right, is_secret, ... }:
+    is_secret = is_secret(left) ∨ is_secret(right)
+----
+
+If either operand is secret, the result is secret.
+
+=== Property 4: CtSelect Always Evaluates Both
+
+[source]
+----
+eval(CtSelect { cond, then_val, else_val }) =
+    let c = eval(cond)
+    let t = eval(then_val)  -- ALWAYS evaluated
+    let e = eval(else_val)  -- ALWAYS evaluated
+    ct_mux(c, t, e)
+----
+
+Both branches are evaluated regardless of condition value.
+
+=== Property 5: Variable Secrecy Tracking
+
+[source]
+----
+∀ Let { name, value, body, is_secret }:
+    is_secret = is_secret(value)
+    ∧ ∀ Var { name: n, is_secret: s } in body where n = name:
+        s = is_secret
+----
+
+== Verification Conditions
+
+A conforming implementation MUST satisfy:
+
+[cols="1,3"]
+|===
+| ID | Condition
+
+| VC-1
+| `CtSelect` nodes only appear where source had `if` with secret condition
+
+| VC-2
+| `PubIf` nodes only appear where source had `if` with public condition
+
+| VC-3
+| No `is_secret` flag contradicts computed secrecy
+
+| VC-4
+| Variable secrecy in scope matches binding secrecy
+
+| VC-5
+| All binary ops with any secret operand have `is_secret = true`
+|===
+
+== Examples
+
+=== Example 1: Public Arithmetic
+
+[source]
+----
+Source: 1 + 2
+
+IR: BinOp {
+    op: CtAdd,
+    left: PubInt(1),
+    right: PubInt(2),
+    is_secret: false    // neither operand is secret
+}
+----
+
+=== Example 2: Secret Value
+
+[source]
+----
+Source: secret(42)
+
+IR: SecretInt(42)
+----
+
+=== Example 3: Secret Propagation
+
+[source]
+----
+Source: secret(1) + 2
+
+IR: BinOp {
+    op: CtAdd,
+    left: SecretInt(1),
+    right: PubInt(2),
+    is_secret: true     // left is secret → result is secret
+}
+----
+
+=== Example 4: Secret Conditional → CtSelect
+
+[source]
+----
+Source: let x = secret(1) if x > 0 then 1 else 0
+
+IR: Let {
+    name: "x",
+    value: SecretInt(1),
+    body: CtSelect {           // NOT PubIf!
+        cond: BinOp {
+            op: CtGt,
+            left: Var { name: "x", is_secret: true },
+            right: PubInt(0),
+            is_secret: true    // x is secret
+        },
+        then_val: SecretInt(1),
+        else_val: SecretInt(0)
+    },
+    is_secret: true
+}
+----
+
+=== Example 5: Public Conditional → PubIf
+
+[source]
+----
+Source: let x = 1 if x > 0 then 1 else 0
+
+IR: Let {
+    name: "x",
+    value: PubInt(1),
+    body: PubIf {              // OK: condition is public
+        cond: BinOp {
+            op: CtGt,
+            left: Var { name: "x", is_secret: false },
+            right: PubInt(0),
+            is_secret: false
+        },
+        then_branch: PubInt(1),
+        else_branch: PubInt(0)
+    },
+    is_secret: false
+}
+----
+
+== References
+
+* Barthe et al., "Verifying Constant-Time Implementations" (2016)
+* Almeida et al., "Verifying Constant-Time Implementations by Abstract Interpretation" (2016)
+* Cauligi et al., "Fact: A DSL for Timing-Sensitive Computation" (2019)

@@ -1,0 +1,11 @@
+# Complex example: password strength check
+# Demonstrates nested operations and secrecy propagation
+
+let user_input = secret(8)
+let min_length = 6
+let bonus = 10
+
+# This comparison involves a secret, so it becomes ct_select
+if user_input >= min_length
+  then secret(100) + secret(bonus)
+  else secret(0)

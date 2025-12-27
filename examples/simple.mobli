@@ -1,0 +1,4 @@
+# Simple arithmetic (public values)
+# This compiles to regular Rust operations
+
+1 + 2 * 3

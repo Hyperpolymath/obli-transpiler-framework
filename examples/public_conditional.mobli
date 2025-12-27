@@ -1,0 +1,5 @@
+# Conditional on public value - stays as regular if
+# Since the condition is not secret, branching is safe
+
+let threshold = 10
+if threshold > 5 then 100 else 0

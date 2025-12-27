@@ -1,0 +1,6 @@
+# Conditional on secret - becomes ct_select
+# This is the KEY obliviousness transformation:
+# Branching on secrets is replaced with constant-time selection
+
+let password = secret(42)
+if password == 42 then secret(1) else secret(0)

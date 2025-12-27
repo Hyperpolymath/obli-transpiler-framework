@@ -1,0 +1,193 @@
+// SPDX-License-Identifier: MIT OR AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2024-2025 hyperpolymath
+
+= Bring-Up Checklist
+:icons: font
+:toc:
+
+[.lead]
+Get from zero to running the obli transpiler demo.
+
+== Prerequisites
+
+[cols="1,2,1"]
+|===
+| Tool | Purpose | Install
+
+| Rust 1.70+
+| Compiler toolchain
+| https://rustup.rs
+
+| just
+| Task runner
+| `cargo install just`
+|===
+
+== Quick Start
+
+[source,bash]
+----
+# 1. Clone the repo
+git clone https://github.com/hyperpolymath/obli-transpiler-framework
+cd obli-transpiler-framework
+
+# 2. Build
+just build
+
+# 3. Run tests
+just test
+
+# 4. See the demo
+just demo
+----
+
+== Step-by-Step Verification
+
+=== [ ] Build succeeds
+
+[source,bash]
+----
+just build
+# Expected: Compiling obli-transpiler v0.1.0
+# Expected: Finished release [optimized] target
+----
+
+=== [ ] Tests pass
+
+[source,bash]
+----
+just test
+# Expected: running X tests ... ok
+----
+
+=== [ ] CLI works
+
+[source,bash]
+----
+cargo run --release -- --help
+# Expected: Usage: obli <COMMAND>
+----
+
+=== [ ] Transpile a simple expression
+
+[source,bash]
+----
+just run "1 + 2"
+# Expected: Rust code with Pub::new(1).ct_add(...)
+----
+
+=== [ ] Transpile secret value
+
+[source,bash]
+----
+just run "secret(42)"
+# Expected: Rust code with Secret::new(42)
+----
+
+=== [ ] Key transformation: secret conditional → ct_select
+
+[source,bash]
+----
+just run "let x = secret(1) if x > 0 then secret(1) else secret(0)"
+# Expected: Rust code containing ct_select(...)
+----
+
+=== [ ] Transpile example files
+
+[source,bash]
+----
+just examples
+# Expected: Rust output for each .mobli file
+----
+
+=== [ ] Check all examples
+
+[source,bash]
+----
+for f in examples/*.mobli; do just check-file "$f"; done
+# Expected: Each file reports "OK"
+----
+
+== What You Should See
+
+The **demo** command shows the core transformation:
+
+[source]
+----
+=== Public conditional (stays as if) ===
+// Generated Rust code:
+...
+if threshold.reveal() { ... } else { ... }
+
+=== Secret conditional (becomes ct_select) ===
+// Generated Rust code:
+...
+ct_select(&x.ct_gt(...), &Secret::new(1), &Secret::new(0))
+----
+
+This is the **obliviousness guarantee**: branching on secrets is eliminated.
+
+== File Layout
+
+[source]
+----
+obli-transpiler-framework/
+├── Cargo.toml              # Rust project manifest
+├── src/
+│   ├── main.rs             # CLI entry point
+│   ├── lib.rs              # Library API
+│   ├── lexer.rs            # Tokenizer
+│   ├── parser.rs           # Parser → AST
+│   ├── ast.rs              # Abstract Syntax Tree
+│   ├── ir.rs               # Oblivious IR
+│   ├── transform.rs        # AST → Oblivious IR
+│   └── emit.rs             # IR → Rust code
+├── examples/
+│   ├── simple.mobli        # Basic arithmetic
+│   ├── secret_value.mobli  # Secret wrapping
+│   ├── conditional.mobli   # Secret branching
+│   ├── public_conditional.mobli
+│   └── complex.mobli       # Nested example
+├── docs/
+│   └── SPEC.adoc           # Language specification
+├── justfile                # Task runner recipes
+├── BRINGUP.adoc            # This file
+└── README.adoc             # Project overview
+----
+
+== Troubleshooting
+
+[cols="1,2"]
+|===
+| Problem | Solution
+
+| `cargo: command not found`
+| Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh`
+
+| `just: command not found`
+| Install just: `cargo install just`
+
+| Build fails with version error
+| Update Rust: `rustup update`
+
+| Tests fail
+| Run `cargo test -- --nocapture` for details
+|===
+
+== Next Steps
+
+After bring-up:
+
+1. Read link:docs/SPEC.adoc[SPEC.adoc] for language details
+2. Write your own `.mobli` files
+3. Examine the generated Rust code
+4. Understand how `ct_select` prevents timing leaks
+
+== Success Criteria
+
+You're done when:
+
+* [x] `just build` completes without errors
+* [x] `just test` shows all tests passing
+* [x] `just demo` shows both public-if and ct_select output
+* [x] You understand why secret conditionals need constant-time selection

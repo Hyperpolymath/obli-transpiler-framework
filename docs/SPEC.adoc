@@ -1,0 +1,212 @@
+// SPDX-License-Identifier: MIT OR AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2024-2025 hyperpolymath
+
+= MiniObli Language Specification
+:toc: macro
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+[.lead]
+Specification for the MiniObli toy language and its obliviousness transformation.
+
+toc::[]
+
+== Overview
+
+MiniObli is a minimal expression language designed to demonstrate oblivious program transformation. It supports:
+
+* Integer and boolean literals
+* Arithmetic and comparison operators
+* Conditional expressions (`if-then-else`)
+* Let bindings
+* Secret value annotation (`secret(...)`)
+
+== Grammar
+
+[source,bnf]
+----
+program     ::= expr
+
+expr        ::= let_expr | if_expr | or_expr
+
+let_expr    ::= "let" IDENT "=" expr expr
+
+if_expr     ::= "if" expr "then" expr "else" expr
+
+or_expr     ::= and_expr ("or" and_expr)*
+and_expr    ::= cmp_expr ("and" cmp_expr)*
+cmp_expr    ::= add_expr (CMP_OP add_expr)?
+add_expr    ::= mul_expr (("+" | "-") mul_expr)*
+mul_expr    ::= unary (("*" | "/" | "%") unary)*
+unary       ::= ("-" | "not") unary | primary
+
+primary     ::= INT
+              | BOOL
+              | IDENT
+              | "secret" "(" expr ")"
+              | "(" expr ")"
+
+CMP_OP      ::= "==" | "!=" | "<" | "<=" | ">" | ">="
+
+INT         ::= [0-9]+
+BOOL        ::= "true" | "false"
+IDENT       ::= [a-zA-Z_][a-zA-Z0-9_]*
+----
+
+== Semantics
+
+=== Values
+
+MiniObli has two value categories:
+
+[cols="1,2,2"]
+|===
+| Category | Description | Example
+
+| *Public*
+| Values visible to observers, can branch on
+| `42`, `true`, `x`
+
+| *Secret*
+| Sensitive values, must not leak via timing
+| `secret(42)`, `secret(pin)`
+|===
+
+=== Secret Propagation
+
+Secrecy propagates through operations:
+
+[source]
+----
+secret(1) + 2          # Result is secret
+secret(1) > 0          # Result is secret (boolean)
+let x = secret(1) x    # x is secret in body
+----
+
+=== Obliviousness Transformation
+
+The key transformation is converting branching on secrets to constant-time selection:
+
+[cols="1,1"]
+|===
+| Source (Leaky) | Target (Oblivious)
+
+a|
+[source]
+----
+if secret_cond
+  then a
+  else b
+----
+
+a|
+[source]
+----
+ct_select(secret_cond, a, b)
+// Both a and b are ALWAYS evaluated
+----
+|===
+
+**Why this matters:** In normal code, `if secret then a else b` reveals information about `secret` through:
+
+* Execution time (one branch may be faster)
+* Memory access patterns
+* CPU branch prediction state
+
+`ct_select` evaluates **both** branches and selects the result using constant-time bitwise operations.
+
+== Examples
+
+=== Public Arithmetic
+
+[source]
+----
+# Input
+1 + 2 * 3
+
+# No secret data, compiles to normal operations
+Pub::new(1).ct_add(&Pub::new(2).ct_mul(&Pub::new(3)))
+----
+
+=== Secret Value
+
+[source]
+----
+# Input
+let pin = secret(1234)
+pin * 2
+
+# Output wraps value in Secret type
+{ let pin = Secret::new(1234); pin.ct_mul(&Secret::new(2)) }
+----
+
+=== Conditional on Secret
+
+[source]
+----
+# Input
+let password = secret(42)
+if password == 42 then secret(1) else secret(0)
+
+# Becomes ct_select (constant-time)
+{
+  let password = Secret::new(42);
+  ct_select(
+    &password.ct_eq(&Pub::new(42)),
+    &Secret::new(1),
+    &Secret::new(0)
+  )
+}
+----
+
+== Target: Rust Runtime
+
+The transpiler emits Rust code with these types:
+
+[source,rust]
+----
+struct Pub<T>(T);    // Public value
+struct Secret<T>(T); // Secret value - constant-time ops only
+
+fn ct_select<T>(cond: &Secret<bool>, a: &Secret<T>, b: &Secret<T>) -> Secret<T>;
+----
+
+=== Constant-Time Operations
+
+All operations on `Secret` values use constant-time implementations:
+
+[cols="1,1,2"]
+|===
+| Operation | Method | Notes
+
+| Addition | `ct_add` | Wrapping arithmetic
+| Subtraction | `ct_sub` | Wrapping arithmetic
+| Multiplication | `ct_mul` | Wrapping arithmetic
+| Comparison | `ct_eq`, `ct_lt`, etc. | Returns `Secret<bool>`
+| Selection | `ct_select` | Bitwise mux, no branching
+|===
+
+== Limitations (Toy Implementation)
+
+This is a demonstration, not production-ready:
+
+1. **No type checking** - assumes all operations are valid
+2. **No function definitions** - single expression only
+3. **Simplified ct_select** - uses `transmute`, real impl needs careful asm
+4. **No ORAM** - memory access patterns still leak
+5. **Hardware timing** - division may leak on some CPUs
+
+== Future Work
+
+* Type system with secrecy annotations
+* Multi-expression programs with functions
+* Verified constant-time assembly generation
+* ORAM integration for memory obliviousness
+* Multiple target backends (WASM, C)
+
+== References
+
+* link:https://bearssl.org/constanttime.html[BearSSL Constant-Time Crypto]
+* link:https://www.chosenplaintext.ca/articles/beginners-guide-constant-time-cryptography.html[Beginner's Guide to Constant-Time Crypto]
+* link:https://eprint.iacr.org/2016/086[Verifying Constant-Time Implementations]

@@ -133,7 +133,7 @@ impl ObliExpr {
             ObliExpr::PubIf { then_branch, else_branch, .. } => {
                 then_branch.is_secret() || else_branch.is_secret()
             }
-            ObliExpr::Let { is_secret, .. } => *is_secret,
+            ObliExpr::Let { body, .. } => body.is_secret(),
         }
     }
 }
